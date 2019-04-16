@@ -13,9 +13,10 @@ import numpy as np
 import pandas as pd
 import datetime
 from scipy import signal as signal
+import matplotlib.pyplot as plt
 
 
-# In[ ]:
+# In[3]:
 
 
 def frread(fname=None):
@@ -94,7 +95,7 @@ def vr2_to_panda(dir_name,fname, site):
     
     return whdf, fs
 
-def spectrogram_gen(data, fs):
+def spectrogram_gen(data, fs, scaling=parameters.scaling):
     """Compute spectrogram from vr2 data collected
     inputs
         data       Pandas DataFrame of the vr2 data
@@ -102,8 +103,15 @@ def spectrogram_gen(data, fs):
     outputs
         data_info  dictionary of the frequencies, time, and spectrum of the sprectrogram
     """
-    frequencies, times, spectrogram = signal.spectrogram(data.X.values, fs=fs, detrend=parameters.detrend, nfft=parameters.nfft, 
-                                                        noverlap=parameters.noverlap, scaling=parameters.scaling)
+    frequencies, times, spectrogram = signal.spectrogram(
+        data.X.values, 
+        fs=fs, 
+        nperseg = parameters.nperseg,
+        noverlap=parameters.noverlap,
+        nfft=parameters.nfft, 
+        detrend=parameters.detrend, 
+        scaling=scaling,
+        mode = parameters.mode)
     return frequencies, times, np.log10(spectrogram)
 
 def reshape_spectrogram(f, t, s):
@@ -123,8 +131,56 @@ def reshape_spectrogram(f, t, s):
     sft = np.vstack((_t,_s))
     return sft
 
-def spectrogram_from_vr2(dir_name,fname, site):
+def spectrogram_from_vr2(dir_name,fname, site,
+                        nperseg = parameters.nperseg,
+                        noverlap=parameters.noverlap,
+                        nfft=parameters.nfft, 
+                        detrend=parameters.detrend,
+                        scaling=parameters.scaling,
+                        mode = parameters.mode):
     whdf, fs = vr2_to_panda(dir_name,fname, site)
-    return spectrogram_gen(whdf, fs)
+    freq, time, spec = signal.spectrogram(
+        whdf.X.values, 
+        fs=fs, 
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft, 
+        detrend=detrend, 
+        scaling=scaling,
+        mode=mode)
+    return freq, time, np.log10(spec)
     
+
+def spectrogram_plot(spectrogram,size=None, x_axis=None, y_axis=None, x_label=None, y_label=None, scaling=parameters.scaling, cmap='jet' ):
+    if size:
+        fig = plt.figure(figsize=(10,3))
+    else:
+        fig = plt.figure()
+    if x_axis is not None and y_axis is not None:
+        img = plt.pcolormesh(y_axis, x_axis, spectrogram, cmap=cmap)
+    else:
+        img = plt.pcolormesh(spectrogram, cmap=cmap)
+    fig.colorbar(mappable=img, label=str(scaling))
+    if x_label and y_label :
+        plt.xlabel('Time (s)')
+        plt.ylabel('Frequency (kHz)')
+    plt.show()
+    return spectrogram
+    
+def spectrogram_full_plot(dir_name,fname, site, cmap='jet',
+                        nperseg = parameters.nperseg,
+                        noverlap=parameters.noverlap,
+                        nfft=parameters.nfft, 
+                        detrend=parameters.detrend,
+                        scaling=parameters.scaling,
+                        mode = parameters.mode):
+    freq, time, spec = spectrogram_from_vr2(dir_name,fname, site,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft, 
+        detrend=detrend, 
+        scaling=scaling,
+        mode=mode)
+    spectrogram_plot(spec, size=(16,5), x_axis=freq/10**3, y_axis=time, x_label='Time (s)', y_label='Frequency (kHz)', scaling=scaling+' [dB]', cmap=cmap)
+    return freq, time, spec
 

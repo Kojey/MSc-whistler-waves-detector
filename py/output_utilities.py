@@ -50,7 +50,7 @@ def datetime_diff(datetime2, datetime1):
     return datetime_to_ms(datetime2)-datetime_to_ms(datetime1)
 
 
-# In[3]:
+# In[1]:
 
 
 def extract_output_dataset(data_root, awd_event, site, verbose=False):
@@ -121,11 +121,15 @@ def extract_output(awd_event, site, file, verbose=False):
             time difference 
     '''
     output_location = os.path.join(parameters.database_location, 'awdEvents'+str(awd_event))
-    output_data = extract_output_dataset(output_location, awd_event, site)[file]
+    output_data = extract_output_dataset(output_location, awd_event, site,verbose=verbose)[file]
     file_time = file[:27]
     outputs = []
     for key,value in output_data.items():
         outputs.append([round(datetime_diff(key,file_time),5), value])
         outputs = sorted(outputs, key=lambda x:x[0])
     return file_time, output_data, outputs
+
+def probable_output(indices, threshold):
+    '''Return the indexes when the measure of detection is above the threshold'''
+    return [index for index in indices if int(index[-1]) >= threshold]
 
